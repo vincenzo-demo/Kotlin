@@ -230,60 +230,71 @@ fun fetchMealsByIngredient(ingredient: String): List<Meal> {
 }
 
 /**
+ * Helper function to safely get a nullable String from a JSONObject.
+ * Returns null if the key is missing, the value is JSONObject.NULL, or the string is empty.
+ * This avoids the issue where optString returns the string "null" instead of actual null.
+ */
+fun JSONObject.getNullableString(key: String): String? {
+    if (!this.has(key) || this.isNull(key)) return null
+    val value = this.getString(key)
+    return if (value.isNullOrEmpty() || value == "null") null else value
+}
+
+/**
  * Parses a single meal from a JSONObject into a Meal data class.
- * Handles null values using optString.
+ * Uses getNullableString helper to properly handle null JSON values.
  */
 fun parseMealFromJson(json: JSONObject): Meal {
     return Meal(
         idMeal = json.getString("idMeal"),
         name = json.optString("strMeal", ""),
-        drinkAlternate = json.optString("strDrinkAlternate", null),
-        category = json.optString("strCategory", null),
-        area = json.optString("strArea", null),
-        instructions = json.optString("strInstructions", null),
-        mealThumb = json.optString("strMealThumb", null),
-        tags = json.optString("strTags", null),
-        youtube = json.optString("strYoutube", null),
-        ingredient1 = json.optString("strIngredient1", null),
-        ingredient2 = json.optString("strIngredient2", null),
-        ingredient3 = json.optString("strIngredient3", null),
-        ingredient4 = json.optString("strIngredient4", null),
-        ingredient5 = json.optString("strIngredient5", null),
-        ingredient6 = json.optString("strIngredient6", null),
-        ingredient7 = json.optString("strIngredient7", null),
-        ingredient8 = json.optString("strIngredient8", null),
-        ingredient9 = json.optString("strIngredient9", null),
-        ingredient10 = json.optString("strIngredient10", null),
-        ingredient11 = json.optString("strIngredient11", null),
-        ingredient12 = json.optString("strIngredient12", null),
-        ingredient13 = json.optString("strIngredient13", null),
-        ingredient14 = json.optString("strIngredient14", null),
-        ingredient15 = json.optString("strIngredient15", null),
-        ingredient16 = json.optString("strIngredient16", null),
-        ingredient17 = json.optString("strIngredient17", null),
-        ingredient18 = json.optString("strIngredient18", null),
-        ingredient19 = json.optString("strIngredient19", null),
-        ingredient20 = json.optString("strIngredient20", null),
-        measure1 = json.optString("strMeasure1", null),
-        measure2 = json.optString("strMeasure2", null),
-        measure3 = json.optString("strMeasure3", null),
-        measure4 = json.optString("strMeasure4", null),
-        measure5 = json.optString("strMeasure5", null),
-        measure6 = json.optString("strMeasure6", null),
-        measure7 = json.optString("strMeasure7", null),
-        measure8 = json.optString("strMeasure8", null),
-        measure9 = json.optString("strMeasure9", null),
-        measure10 = json.optString("strMeasure10", null),
-        measure11 = json.optString("strMeasure11", null),
-        measure12 = json.optString("strMeasure12", null),
-        measure13 = json.optString("strMeasure13", null),
-        measure14 = json.optString("strMeasure14", null),
-        measure15 = json.optString("strMeasure15", null),
-        measure16 = json.optString("strMeasure16", null),
-        measure17 = json.optString("strMeasure17", null),
-        measure18 = json.optString("strMeasure18", null),
-        measure19 = json.optString("strMeasure19", null),
-        measure20 = json.optString("strMeasure20", null)
+        drinkAlternate = json.getNullableString("strDrinkAlternate"),
+        category = json.getNullableString("strCategory"),
+        area = json.getNullableString("strArea"),
+        instructions = json.getNullableString("strInstructions"),
+        mealThumb = json.getNullableString("strMealThumb"),
+        tags = json.getNullableString("strTags"),
+        youtube = json.getNullableString("strYoutube"),
+        ingredient1 = json.getNullableString("strIngredient1"),
+        ingredient2 = json.getNullableString("strIngredient2"),
+        ingredient3 = json.getNullableString("strIngredient3"),
+        ingredient4 = json.getNullableString("strIngredient4"),
+        ingredient5 = json.getNullableString("strIngredient5"),
+        ingredient6 = json.getNullableString("strIngredient6"),
+        ingredient7 = json.getNullableString("strIngredient7"),
+        ingredient8 = json.getNullableString("strIngredient8"),
+        ingredient9 = json.getNullableString("strIngredient9"),
+        ingredient10 = json.getNullableString("strIngredient10"),
+        ingredient11 = json.getNullableString("strIngredient11"),
+        ingredient12 = json.getNullableString("strIngredient12"),
+        ingredient13 = json.getNullableString("strIngredient13"),
+        ingredient14 = json.getNullableString("strIngredient14"),
+        ingredient15 = json.getNullableString("strIngredient15"),
+        ingredient16 = json.getNullableString("strIngredient16"),
+        ingredient17 = json.getNullableString("strIngredient17"),
+        ingredient18 = json.getNullableString("strIngredient18"),
+        ingredient19 = json.getNullableString("strIngredient19"),
+        ingredient20 = json.getNullableString("strIngredient20"),
+        measure1 = json.getNullableString("strMeasure1"),
+        measure2 = json.getNullableString("strMeasure2"),
+        measure3 = json.getNullableString("strMeasure3"),
+        measure4 = json.getNullableString("strMeasure4"),
+        measure5 = json.getNullableString("strMeasure5"),
+        measure6 = json.getNullableString("strMeasure6"),
+        measure7 = json.getNullableString("strMeasure7"),
+        measure8 = json.getNullableString("strMeasure8"),
+        measure9 = json.getNullableString("strMeasure9"),
+        measure10 = json.getNullableString("strMeasure10"),
+        measure11 = json.getNullableString("strMeasure11"),
+        measure12 = json.getNullableString("strMeasure12"),
+        measure13 = json.getNullableString("strMeasure13"),
+        measure14 = json.getNullableString("strMeasure14"),
+        measure15 = json.getNullableString("strMeasure15"),
+        measure16 = json.getNullableString("strMeasure16"),
+        measure17 = json.getNullableString("strMeasure17"),
+        measure18 = json.getNullableString("strMeasure18"),
+        measure19 = json.getNullableString("strMeasure19"),
+        measure20 = json.getNullableString("strMeasure20")
     )
 }
 
