@@ -13,8 +13,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
@@ -24,7 +27,10 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -64,19 +70,19 @@ fun SearchMealsScreen() {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp)
+            .padding(20.dp)
             .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(20.dp))
 
         Text(
             text = "Search for Meals",
-            fontSize = 22.sp,
+            fontSize = 26.sp,
             fontWeight = FontWeight.Bold
         )
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(20.dp))
 
         // Text field for search input
         TextField(
@@ -86,7 +92,7 @@ fun SearchMealsScreen() {
             modifier = Modifier.fillMaxWidth()
         )
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
         // Search button
         Button(
@@ -102,7 +108,7 @@ fun SearchMealsScreen() {
                         resultsText.value = "No meals found."
                         bitmaps.value = emptyMap()
                     } else {
-                        resultsText.value = formatMealsForDisplay(meals)
+                        resultsText.value = "${meals.size} meals found."
 
                         // Load images for each meal in background
                         val loadedBitmaps = mutableMapOf<String, Bitmap?>()
@@ -117,34 +123,21 @@ fun SearchMealsScreen() {
                     }
                 }
             },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(52.dp),
+            shape = RoundedCornerShape(12.dp)
         ) {
             Text("Search", fontSize = 16.sp)
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(20.dp))
 
-        // Display results with images
+        // Display results with images inside cards
         if (mealsList.value.isNotEmpty()) {
             for (meal in mealsList.value) {
-                // Show meal image if available
-                val bitmap = bitmaps.value[meal.idMeal]
-                if (bitmap != null) {
-                    Image(
-                        bitmap = bitmap.asImageBitmap(),
-                        contentDescription = meal.name,
-                        modifier = Modifier.size(120.dp)
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                }
-
-                // Show meal details
-                Text(
-                    text = buildMealDetailString(meal),
-                    fontSize = 13.sp,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Spacer(modifier = Modifier.height(16.dp))
+                MealCard(meal = meal, bitmap = bitmaps.value[meal.idMeal])
+                Spacer(modifier = Modifier.height(20.dp))
             }
         } else if (resultsText.value.isNotEmpty()) {
             Text(
@@ -156,18 +149,138 @@ fun SearchMealsScreen() {
 }
 
 /**
- * Builds a formatted string with all details of a single meal.
+ * Shared composable that displays a single meal inside a styled Card.
+ * Used by both SearchMealsScreen and SearchWebScreen for consistency.
  */
-fun buildMealDetailString(meal: Meal): String {
-    val sb = StringBuilder()
-    sb.appendLine("\"Meal\":\"${meal.name}\",")
-    sb.appendLine("\"DrinkAlternate\":${if (meal.drinkAlternate.isNullOrEmpty()) "null" else "\"${meal.drinkAlternate}\""},")
-    sb.appendLine("\"Category\":\"${meal.category ?: ""}\",")
-    sb.appendLine("\"Area\":\"${meal.area ?: ""}\",")
-    sb.appendLine("\"Instructions\":\"${meal.instructions ?: ""}\",")
-    sb.appendLine("\"Tags\":${if (meal.tags.isNullOrEmpty()) "null" else "\"${meal.tags}\""},")
-    sb.appendLine("\"Youtube\":\"${meal.youtube ?: ""}\",")
+@Composable
+fun MealCard(meal: Meal, bitmap: Bitmap?) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White)
+    ) {
+        Column(
+            modifier = Modifier.padding(20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            // Meal image - centered with rounded corners
+            if (bitmap != null) {
+                Image(
+                    bitmap = bitmap.asImageBitmap(),
+                    contentDescription = meal.name,
+                    modifier = Modifier
+                        .size(180.dp)
+                        .clip(RoundedCornerShape(12.dp)),
+                    contentScale = ContentScale.Crop
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+            }
 
+            // Meal title - large and bold
+            Text(
+                text = meal.name,
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            // Category and Area
+            if (!meal.category.isNullOrEmpty() || !meal.area.isNullOrEmpty()) {
+                Text(
+                    text = "${meal.category ?: ""} | ${meal.area ?: ""}",
+                    fontSize = 14.sp,
+                    color = Color.Gray,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+
+            // Instructions section header
+            if (!meal.instructions.isNullOrEmpty()) {
+                Text(
+                    text = "Instructions",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // Format instructions as numbered steps
+                val steps = formatInstructionSteps(meal.instructions)
+                for (step in steps) {
+                    Text(
+                        text = step,
+                        fontSize = 14.sp,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 8.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+            }
+
+            // Ingredients section header
+            Text(
+                text = "Ingredients",
+                fontSize = 18.sp,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Format ingredients as bullet list - each on new line
+            val ingredientLines = getIngredientsList(meal)
+            for (line in ingredientLines) {
+                Text(
+                    text = line,
+                    fontSize = 14.sp,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 4.dp)
+                )
+            }
+
+            // Tags
+            if (!meal.tags.isNullOrEmpty()) {
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    text = "Tags: ${meal.tags}",
+                    fontSize = 13.sp,
+                    color = Color.Gray,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Normalizes instructions text into numbered steps.
+ * Splits on sentences and returns a list like ["Step 1: ...", "Step 2: ...", ...].
+ */
+fun formatInstructionSteps(instructions: String?): List<String> {
+    if (instructions.isNullOrBlank()) return emptyList()
+    var text = instructions
+    // Remove existing step numbering patterns
+    text = text.replace(Regex("(?i)step\\s*\\d+[:\\-.]?\\s*"), "")
+    text = text.replace(Regex("^\\d+\\.\\s*", RegexOption.MULTILINE), "")
+    // Split on period followed by space or newline
+    val steps = text.split(Regex("(?<=\\.)\\s+"))
+        .map { it.trim() }
+        .filter { it.isNotEmpty() && it.length > 2 }
+    return steps.mapIndexed { index, step ->
+        "Step ${index + 1}: $step"
+    }
+}
+
+/**
+ * Extracts non-empty ingredients with their measures as a bullet list.
+ * Returns a list like ["- Pork (200g)", "- Egg (1)", ...].
+ */
+fun getIngredientsList(meal: Meal): List<String> {
     val ingredients = listOf(
         meal.ingredient1, meal.ingredient2, meal.ingredient3, meal.ingredient4,
         meal.ingredient5, meal.ingredient6, meal.ingredient7, meal.ingredient8,
@@ -182,19 +295,17 @@ fun buildMealDetailString(meal: Meal): String {
         meal.measure13, meal.measure14, meal.measure15, meal.measure16,
         meal.measure17, meal.measure18, meal.measure19, meal.measure20
     )
-
-    for (j in ingredients.indices) {
-        val ing = ingredients[j]
+    val result = mutableListOf<String>()
+    for (i in ingredients.indices) {
+        val ing = ingredients[i]
         if (!ing.isNullOrEmpty()) {
-            sb.appendLine("\"Ingredient${j + 1}\":\"$ing\",")
+            val meas = measures[i]
+            if (!meas.isNullOrEmpty()) {
+                result.add("- $ing ($meas)")
+            } else {
+                result.add("- $ing")
+            }
         }
     }
-    for (j in measures.indices) {
-        val meas = measures[j]
-        if (!meas.isNullOrEmpty()) {
-            sb.appendLine("\"Measure${j + 1}\":\"$meas\",")
-        }
-    }
-
-    return sb.toString()
+    return result
 }

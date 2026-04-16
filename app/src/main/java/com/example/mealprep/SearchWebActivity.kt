@@ -4,15 +4,14 @@ import android.graphics.Bitmap
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
@@ -24,7 +23,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -68,19 +66,19 @@ fun SearchWebScreen() {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp)
+            .padding(20.dp)
             .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(20.dp))
 
         Text(
             text = "Search Meals from Web Service",
-            fontSize = 22.sp,
+            fontSize = 26.sp,
             fontWeight = FontWeight.Bold
         )
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(20.dp))
 
         // Text field for meal name search
         TextField(
@@ -90,7 +88,7 @@ fun SearchWebScreen() {
             modifier = Modifier.fillMaxWidth()
         )
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
         // Search button
         Button(
@@ -131,12 +129,15 @@ fun SearchWebScreen() {
                     }
                 }
             },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(52.dp),
+            shape = RoundedCornerShape(12.dp)
         ) {
             Text("Search", fontSize = 16.sp)
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
         // Status message
         if (statusMessage.value.isNotEmpty()) {
@@ -156,26 +157,10 @@ fun SearchWebScreen() {
             )
         }
 
-        // Display meals with images
+        // Display meals with images inside cards (same as SearchMeals for consistency)
         for (meal in mealsList.value) {
-            // Show meal image if available
-            val bitmap = bitmaps.value[meal.idMeal]
-            if (bitmap != null) {
-                Image(
-                    bitmap = bitmap.asImageBitmap(),
-                    contentDescription = meal.name,
-                    modifier = Modifier.size(120.dp)
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-            }
-
-            // Show meal details
-            Text(
-                text = buildMealDetailString(meal),
-                fontSize = 13.sp,
-                modifier = Modifier.fillMaxWidth()
-            )
-            Spacer(modifier = Modifier.height(16.dp))
+            MealCard(meal = meal, bitmap = bitmaps.value[meal.idMeal])
+            Spacer(modifier = Modifier.height(20.dp))
         }
     }
 }

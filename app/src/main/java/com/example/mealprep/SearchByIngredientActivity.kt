@@ -1,29 +1,30 @@
 package com.example.mealprep
 
+import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -36,9 +37,6 @@ import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.net.HttpURLConnection
 import java.net.URL
-import android.graphics.Bitmap
-import androidx.compose.foundation.layout.Row
-import androidx.compose.runtime.remember
 
 /**
  * Activity for searching meals by ingredient using TheMealDB API.
@@ -62,27 +60,27 @@ fun SearchByIngredientScreen() {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val ingredient = rememberSaveable { mutableStateOf("") }
-    val mealsText = rememberSaveable { mutableStateOf("") }
     val statusMessage = rememberSaveable { mutableStateOf("") }
-    // Store retrieved meals for saving to DB (not saveable, will be re-fetched on rotation if needed)
+    // Store retrieved meals for saving to DB and display
     val retrievedMeals = remember { mutableStateOf<List<Meal>>(emptyList()) }
+    val bitmaps = remember { mutableStateOf<Map<String, Bitmap?>>(emptyMap()) }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp)
+            .padding(20.dp)
             .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(20.dp))
 
         Text(
             text = "Search Meals By Ingredient",
-            fontSize = 22.sp,
+            fontSize = 26.sp,
             fontWeight = FontWeight.Bold
         )
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(20.dp))
 
         // Text field for ingredient input
         TextField(
@@ -92,7 +90,7 @@ fun SearchByIngredientScreen() {
             modifier = Modifier.fillMaxWidth()
         )
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
         // Row with two buttons
         Row {
@@ -101,25 +99,35 @@ fun SearchByIngredientScreen() {
                 onClick = {
                     scope.launch {
                         statusMessage.value = "Searching..."
-                        mealsText.value = ""
+                        retrievedMeals.value = emptyList()
+                        bitmaps.value = emptyMap()
                         try {
                             val meals = withContext(Dispatchers.IO) {
                                 fetchMealsByIngredient(ingredient.value)
                             }
                             retrievedMeals.value = meals
                             if (meals.isEmpty()) {
-                                mealsText.value = "No meals found."
+                                statusMessage.value = "No meals found."
                             } else {
-                                mealsText.value = formatMealsForDisplay(meals)
+                                statusMessage.value = "${meals.size} meals found."
+                                // Load images in background
+                                val loadedBitmaps = mutableMapOf<String, Bitmap?>()
+                                withContext(Dispatchers.IO) {
+                                    for (meal in meals) {
+                                        if (!meal.mealThumb.isNullOrEmpty()) {
+                                            loadedBitmaps[meal.idMeal] = loadBitmapFromUrl(meal.mealThumb)
+                                        }
+                                    }
+                                }
+                                bitmaps.value = loadedBitmaps
                             }
-                            statusMessage.value = ""
                         } catch (e: Exception) {
-                            mealsText.value = "Error: ${e.message}"
-                            statusMessage.value = ""
+                            statusMessage.value = "Error: ${e.message}"
                         }
                     }
                 },
-                modifier = Modifier.padding(end = 8.dp)
+                modifier = Modifier.padding(end = 8.dp),
+                shape = RoundedCornerShape(12.dp)
             ) {
                 Text("Retrieve Meals")
             }
@@ -138,13 +146,14 @@ fun SearchByIngredientScreen() {
                             statusMessage.value = "No meals to save. Retrieve meals first."
                         }
                     }
-                }
+                },
+                shape = RoundedCornerShape(12.dp)
             ) {
                 Text("Save meals to Database")
             }
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
         // Status message
         if (statusMessage.value.isNotEmpty()) {
@@ -153,16 +162,13 @@ fun SearchByIngredientScreen() {
                 fontWeight = FontWeight.Bold,
                 fontSize = 14.sp
             )
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(12.dp))
         }
 
-        // Display retrieved meals
-        if (mealsText.value.isNotEmpty()) {
-            Text(
-                text = mealsText.value,
-                fontSize = 14.sp,
-                modifier = Modifier.fillMaxWidth()
-            )
+        // Display retrieved meals inside cards with images
+        for (meal in retrievedMeals.value) {
+            MealCard(meal = meal, bitmap = bitmaps.value[meal.idMeal])
+            Spacer(modifier = Modifier.height(20.dp))
         }
     }
 }
