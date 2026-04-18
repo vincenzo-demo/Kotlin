@@ -5,6 +5,7 @@ import android.graphics.BitmapFactory
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -12,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -22,6 +24,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -159,10 +162,29 @@ fun SearchByIngredientScreen(vm: SearchByIngredientViewModel = viewModel()) {
             Spacer(modifier = Modifier.height(12.dp))
         }
 
-        // Display retrieved meals inside cards with images
-        for (meal in vm.retrievedMeals.value) {
-            MealCard(meal = meal, bitmap = vm.bitmaps.value[meal.idMeal])
-            Spacer(modifier = Modifier.height(20.dp))
+        // Display retrieved meals
+        if (vm.retrievedMeals.value.isNotEmpty()) {
+            // REQUIRED TEXT FORMAT (Task 3)
+            Text(
+                text = formatMealsForDisplay(vm.retrievedMeals.value),
+                fontSize = 12.sp
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // IMAGES (Task 6) - display image for each meal
+            for (meal in vm.retrievedMeals.value) {
+                val bitmap = vm.bitmaps.value[meal.idMeal]
+                if (bitmap != null) {
+                    Image(
+                        bitmap = bitmap.asImageBitmap(),
+                        contentDescription = meal.name,
+                        modifier = Modifier
+                            .size(120.dp)
+                            .padding(8.dp)
+                    )
+                }
+            }
         }
     }
 }

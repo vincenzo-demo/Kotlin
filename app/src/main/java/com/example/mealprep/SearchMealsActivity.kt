@@ -127,11 +127,28 @@ fun SearchMealsScreen(vm: SearchMealsViewModel = viewModel()) {
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        // Display results with images inside cards
+        // Display results with images
         if (vm.mealsList.value.isNotEmpty()) {
+            // REQUIRED TEXT FORMAT (Task 3)
+            Text(
+                text = formatMealsForDisplay(vm.mealsList.value),
+                fontSize = 12.sp
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // IMAGES (Task 6) - display image for each meal
             for (meal in vm.mealsList.value) {
-                MealCard(meal = meal, bitmap = vm.bitmaps.value[meal.idMeal])
-                Spacer(modifier = Modifier.height(20.dp))
+                val bitmap = vm.bitmaps.value[meal.idMeal]
+                if (bitmap != null) {
+                    Image(
+                        bitmap = bitmap.asImageBitmap(),
+                        contentDescription = meal.name,
+                        modifier = Modifier
+                            .size(120.dp)
+                            .padding(8.dp)
+                    )
+                }
             }
         } else if (vm.resultsText.value.isNotEmpty()) {
             Text(
