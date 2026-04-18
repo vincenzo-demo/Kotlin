@@ -17,6 +17,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -59,9 +60,24 @@ fun SearchWebScreen() {
     val searchText = rememberSaveable { mutableStateOf("") }
     val resultsText = rememberSaveable { mutableStateOf("") }
     val statusMessage = rememberSaveable { mutableStateOf("") }
-    // Store retrieved meals and their bitmaps
-    val mealsList = remember { mutableStateOf<List<Meal>>(emptyList()) }
+    // Store retrieved meals and their bitmaps (meals survive rotation)
+    val mealsList = rememberSaveable(saver = MealListSaver) { mutableStateOf(emptyList()) }
     val bitmaps = remember { mutableStateOf<Map<String, Bitmap?>>(emptyMap()) }
+
+    // Reload bitmaps after rotation (meals restored via rememberSaveable, bitmaps lost)
+    LaunchedEffect(Unit) {
+        if (mealsList.value.isNotEmpty() && bitmaps.value.isEmpty()) {
+            val loadedBitmaps = mutableMapOf<String, Bitmap?>()
+            withContext(Dispatchers.IO) {
+                for (meal in mealsList.value) {
+                    if (!meal.mealThumb.isNullOrEmpty()) {
+                        loadedBitmaps[meal.idMeal] = loadBitmapFromUrl(meal.mealThumb)
+                    }
+                }
+            }
+            bitmaps.value = loadedBitmaps
+        }
+    }
 
     Column(
         modifier = Modifier
