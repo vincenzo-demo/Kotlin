@@ -21,11 +21,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -36,6 +32,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -57,31 +54,12 @@ class SearchMealsActivity : ComponentActivity() {
 /**
  * Composable screen for searching meals in the local database.
  * Displays matching meals with their images.
+ * Uses ViewModel to preserve state across screen rotation.
  */
 @Composable
-fun SearchMealsScreen() {
+fun SearchMealsScreen(vm: SearchMealsViewModel = viewModel()) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val searchText = rememberSaveable { mutableStateOf("") }
-    val resultsText = rememberSaveable { mutableStateOf("") }
-    // Store meals and their loaded bitmaps for display (meals survive rotation)
-    val mealsList = rememberSaveable(saver = MealListSaver) { mutableStateOf(emptyList()) }
-    val bitmaps = remember { mutableStateOf<Map<String, Bitmap?>>(emptyMap()) }
-
-    // Reload bitmaps after rotation (meals restored via rememberSaveable, bitmaps lost)
-    LaunchedEffect(Unit) {
-        if (mealsList.value.isNotEmpty() && bitmaps.value.isEmpty()) {
-            val loadedBitmaps = mutableMapOf<String, Bitmap?>()
-            withContext(Dispatchers.IO) {
-                for (meal in mealsList.value) {
-                    if (!meal.mealThumb.isNullOrEmpty()) {
-                        loadedBitmaps[meal.idMeal] = loadBitmapFromUrl(meal.mealThumb)
-                    }
-                }
-            }
-            bitmaps.value = loadedBitmaps
-        }
-    }
 
     Column(
         modifier = Modifier
@@ -102,8 +80,8 @@ fun SearchMealsScreen() {
 
         // Text field for search input
         TextField(
-            value = searchText.value,
-            onValueChange = { searchText.value = it },
+            value = vm.searchText.value,
+            onValueChange = { vm.searchText.value = it },
             label = { Text("Enter search text") },
             modifier = Modifier.fillMaxWidth()
         )
@@ -116,15 +94,15 @@ fun SearchMealsScreen() {
                 scope.launch {
                     val db = MealDatabase.getDatabase(context)
                     val meals = withContext(Dispatchers.IO) {
-                        db.mealDao().searchMeals(searchText.value)
+                        db.mealDao().searchMeals(vm.searchText.value)
                     }
-                    mealsList.value = meals
+                    vm.mealsList.value = meals
 
                     if (meals.isEmpty()) {
-                        resultsText.value = "No meals found."
-                        bitmaps.value = emptyMap()
+                        vm.resultsText.value = "No meals found."
+                        vm.bitmaps.value = emptyMap()
                     } else {
-                        resultsText.value = "${meals.size} meals found."
+                        vm.resultsText.value = "${meals.size} meals found."
 
                         // Load images for each meal in background
                         val loadedBitmaps = mutableMapOf<String, Bitmap?>()
@@ -135,7 +113,7 @@ fun SearchMealsScreen() {
                                 }
                             }
                         }
-                        bitmaps.value = loadedBitmaps
+                        vm.bitmaps.value = loadedBitmaps
                     }
                 }
             },
@@ -150,14 +128,14 @@ fun SearchMealsScreen() {
         Spacer(modifier = Modifier.height(20.dp))
 
         // Display results with images inside cards
-        if (mealsList.value.isNotEmpty()) {
-            for (meal in mealsList.value) {
-                MealCard(meal = meal, bitmap = bitmaps.value[meal.idMeal])
+        if (vm.mealsList.value.isNotEmpty()) {
+            for (meal in vm.mealsList.value) {
+                MealCard(meal = meal, bitmap = vm.bitmaps.value[meal.idMeal])
                 Spacer(modifier = Modifier.height(20.dp))
             }
-        } else if (resultsText.value.isNotEmpty()) {
+        } else if (vm.resultsText.value.isNotEmpty()) {
             Text(
-                text = resultsText.value,
+                text = vm.resultsText.value,
                 fontSize = 14.sp
             )
         }

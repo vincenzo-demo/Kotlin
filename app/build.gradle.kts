@@ -47,6 +47,9 @@ dependencies {
     implementation("androidx.room:room-ktx:2.6.1")
     ksp("androidx.room:room-compiler:2.6.1")
 
+    // ViewModel for Compose (survives screen rotation)
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.6.2")
+
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
 }

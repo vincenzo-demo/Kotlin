@@ -19,23 +19,17 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.Saver
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.json.JSONArray
 import org.json.JSONObject
 import java.io.BufferedReader
 import java.io.InputStreamReader
@@ -58,31 +52,12 @@ class SearchByIngredientActivity : ComponentActivity() {
 /**
  * Composable screen for searching meals by ingredient.
  * Contains a text field, Retrieve Meals button, and Save meals to Database button.
+ * Uses ViewModel to preserve state across screen rotation.
  */
 @Composable
-fun SearchByIngredientScreen() {
+fun SearchByIngredientScreen(vm: SearchByIngredientViewModel = viewModel()) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val ingredient = rememberSaveable { mutableStateOf("") }
-    val statusMessage = rememberSaveable { mutableStateOf("") }
-    // Store retrieved meals for saving to DB and display (survives rotation)
-    val retrievedMeals = rememberSaveable(saver = MealListSaver) { mutableStateOf(emptyList()) }
-    val bitmaps = remember { mutableStateOf<Map<String, Bitmap?>>(emptyMap()) }
-
-    // Reload bitmaps after rotation (meals restored via rememberSaveable, bitmaps lost)
-    LaunchedEffect(Unit) {
-        if (retrievedMeals.value.isNotEmpty() && bitmaps.value.isEmpty()) {
-            val loadedBitmaps = mutableMapOf<String, Bitmap?>()
-            withContext(Dispatchers.IO) {
-                for (meal in retrievedMeals.value) {
-                    if (!meal.mealThumb.isNullOrEmpty()) {
-                        loadedBitmaps[meal.idMeal] = loadBitmapFromUrl(meal.mealThumb)
-                    }
-                }
-            }
-            bitmaps.value = loadedBitmaps
-        }
-    }
 
     Column(
         modifier = Modifier
@@ -103,8 +78,8 @@ fun SearchByIngredientScreen() {
 
         // Text field for ingredient input
         TextField(
-            value = ingredient.value,
-            onValueChange = { ingredient.value = it },
+            value = vm.ingredient.value,
+            onValueChange = { vm.ingredient.value = it },
             label = { Text("Enter ingredient") },
             modifier = Modifier.fillMaxWidth()
         )
@@ -117,18 +92,18 @@ fun SearchByIngredientScreen() {
             Button(
                 onClick = {
                     scope.launch {
-                        statusMessage.value = "Searching..."
-                        retrievedMeals.value = emptyList()
-                        bitmaps.value = emptyMap()
+                        vm.statusMessage.value = "Searching..."
+                        vm.retrievedMeals.value = emptyList()
+                        vm.bitmaps.value = emptyMap()
                         try {
                             val meals = withContext(Dispatchers.IO) {
-                                fetchMealsByIngredient(ingredient.value)
+                                fetchMealsByIngredient(vm.ingredient.value)
                             }
-                            retrievedMeals.value = meals
+                            vm.retrievedMeals.value = meals
                             if (meals.isEmpty()) {
-                                statusMessage.value = "No meals found."
+                                vm.statusMessage.value = "No meals found."
                             } else {
-                                statusMessage.value = "${meals.size} meals found."
+                                vm.statusMessage.value = "${meals.size} meals found."
                                 // Load images in background
                                 val loadedBitmaps = mutableMapOf<String, Bitmap?>()
                                 withContext(Dispatchers.IO) {
@@ -138,10 +113,10 @@ fun SearchByIngredientScreen() {
                                         }
                                     }
                                 }
-                                bitmaps.value = loadedBitmaps
+                                vm.bitmaps.value = loadedBitmaps
                             }
                         } catch (e: Exception) {
-                            statusMessage.value = "Error: ${e.message}"
+                            vm.statusMessage.value = "Error: ${e.message}"
                         }
                     }
                 },
@@ -155,14 +130,14 @@ fun SearchByIngredientScreen() {
             Button(
                 onClick = {
                     scope.launch {
-                        if (retrievedMeals.value.isNotEmpty()) {
+                        if (vm.retrievedMeals.value.isNotEmpty()) {
                             withContext(Dispatchers.IO) {
                                 val db = MealDatabase.getDatabase(context)
-                                db.mealDao().insertMeals(retrievedMeals.value)
+                                db.mealDao().insertMeals(vm.retrievedMeals.value)
                             }
-                            statusMessage.value = "Meals saved to database!"
+                            vm.statusMessage.value = "Meals saved to database!"
                         } else {
-                            statusMessage.value = "No meals to save. Retrieve meals first."
+                            vm.statusMessage.value = "No meals to save. Retrieve meals first."
                         }
                     }
                 },
@@ -175,9 +150,9 @@ fun SearchByIngredientScreen() {
         Spacer(modifier = Modifier.height(16.dp))
 
         // Status message
-        if (statusMessage.value.isNotEmpty()) {
+        if (vm.statusMessage.value.isNotEmpty()) {
             Text(
-                text = statusMessage.value,
+                text = vm.statusMessage.value,
                 fontWeight = FontWeight.Bold,
                 fontSize = 14.sp
             )
@@ -185,8 +160,8 @@ fun SearchByIngredientScreen() {
         }
 
         // Display retrieved meals inside cards with images
-        for (meal in retrievedMeals.value) {
-            MealCard(meal = meal, bitmap = bitmaps.value[meal.idMeal])
+        for (meal in vm.retrievedMeals.value) {
+            MealCard(meal = meal, bitmap = vm.bitmaps.value[meal.idMeal])
             Spacer(modifier = Modifier.height(20.dp))
         }
     }
@@ -371,66 +346,6 @@ fun formatMealsForDisplay(meals: List<Meal>): String {
     }
     return sb.toString()
 }
-
-/**
- * Converts a Meal object to a JSONObject for state saving.
- * This is the reverse of parseMealFromJson.
- */
-fun mealToJson(meal: Meal): JSONObject {
-    val json = JSONObject()
-    json.put("idMeal", meal.idMeal)
-    json.put("strMeal", meal.name)
-    json.put("strDrinkAlternate", meal.drinkAlternate ?: JSONObject.NULL)
-    json.put("strCategory", meal.category ?: JSONObject.NULL)
-    json.put("strArea", meal.area ?: JSONObject.NULL)
-    json.put("strInstructions", meal.instructions ?: JSONObject.NULL)
-    json.put("strMealThumb", meal.mealThumb ?: JSONObject.NULL)
-    json.put("strTags", meal.tags ?: JSONObject.NULL)
-    json.put("strYoutube", meal.youtube ?: JSONObject.NULL)
-    val ingredients = listOf(
-        meal.ingredient1, meal.ingredient2, meal.ingredient3, meal.ingredient4,
-        meal.ingredient5, meal.ingredient6, meal.ingredient7, meal.ingredient8,
-        meal.ingredient9, meal.ingredient10, meal.ingredient11, meal.ingredient12,
-        meal.ingredient13, meal.ingredient14, meal.ingredient15, meal.ingredient16,
-        meal.ingredient17, meal.ingredient18, meal.ingredient19, meal.ingredient20
-    )
-    val measures = listOf(
-        meal.measure1, meal.measure2, meal.measure3, meal.measure4,
-        meal.measure5, meal.measure6, meal.measure7, meal.measure8,
-        meal.measure9, meal.measure10, meal.measure11, meal.measure12,
-        meal.measure13, meal.measure14, meal.measure15, meal.measure16,
-        meal.measure17, meal.measure18, meal.measure19, meal.measure20
-    )
-    for (i in 1..20) {
-        json.put("strIngredient$i", ingredients[i - 1] ?: JSONObject.NULL)
-        json.put("strMeasure$i", measures[i - 1] ?: JSONObject.NULL)
-    }
-    return json
-}
-
-/**
- * Custom Saver for List<Meal> state so it survives screen rotation.
- * Converts meals to/from JSON string using mealToJson and parseMealFromJson.
- */
-val MealListSaver = Saver<MutableState<List<Meal>>, String>(
-    save = { state ->
-        val jsonArray = JSONArray()
-        for (meal in state.value) {
-            jsonArray.put(mealToJson(meal))
-        }
-        jsonArray.toString()
-    },
-    restore = { jsonString ->
-        val list = mutableListOf<Meal>()
-        if (jsonString.isNotEmpty()) {
-            val jsonArray = JSONArray(jsonString)
-            for (i in 0 until jsonArray.length()) {
-                list.add(parseMealFromJson(jsonArray.getJSONObject(i)))
-            }
-        }
-        mutableStateOf(list)
-    }
-)
 
 /**
  * Downloads an image from a URL and returns it as a Bitmap.

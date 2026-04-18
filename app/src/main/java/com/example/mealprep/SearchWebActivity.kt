@@ -17,16 +17,13 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -53,31 +50,11 @@ class SearchWebActivity : ComponentActivity() {
 /**
  * Composable screen for searching meals by name from the web service.
  * Searches each letter combination to get at least 10 results.
+ * Uses ViewModel to preserve state across screen rotation.
  */
 @Composable
-fun SearchWebScreen() {
+fun SearchWebScreen(vm: SearchWebViewModel = viewModel()) {
     val scope = rememberCoroutineScope()
-    val searchText = rememberSaveable { mutableStateOf("") }
-    val resultsText = rememberSaveable { mutableStateOf("") }
-    val statusMessage = rememberSaveable { mutableStateOf("") }
-    // Store retrieved meals and their bitmaps (meals survive rotation)
-    val mealsList = rememberSaveable(saver = MealListSaver) { mutableStateOf(emptyList()) }
-    val bitmaps = remember { mutableStateOf<Map<String, Bitmap?>>(emptyMap()) }
-
-    // Reload bitmaps after rotation (meals restored via rememberSaveable, bitmaps lost)
-    LaunchedEffect(Unit) {
-        if (mealsList.value.isNotEmpty() && bitmaps.value.isEmpty()) {
-            val loadedBitmaps = mutableMapOf<String, Bitmap?>()
-            withContext(Dispatchers.IO) {
-                for (meal in mealsList.value) {
-                    if (!meal.mealThumb.isNullOrEmpty()) {
-                        loadedBitmaps[meal.idMeal] = loadBitmapFromUrl(meal.mealThumb)
-                    }
-                }
-            }
-            bitmaps.value = loadedBitmaps
-        }
-    }
 
     Column(
         modifier = Modifier
@@ -98,8 +75,8 @@ fun SearchWebScreen() {
 
         // Text field for meal name search
         TextField(
-            value = searchText.value,
-            onValueChange = { searchText.value = it },
+            value = vm.searchText.value,
+            onValueChange = { vm.searchText.value = it },
             label = { Text("Enter meal name") },
             modifier = Modifier.fillMaxWidth()
         )
@@ -110,21 +87,21 @@ fun SearchWebScreen() {
         Button(
             onClick = {
                 scope.launch {
-                    statusMessage.value = "Searching..."
-                    resultsText.value = ""
-                    mealsList.value = emptyList()
-                    bitmaps.value = emptyMap()
+                    vm.statusMessage.value = "Searching..."
+                    vm.resultsText.value = ""
+                    vm.mealsList.value = emptyList()
+                    vm.bitmaps.value = emptyMap()
 
                     try {
                         val meals = withContext(Dispatchers.IO) {
-                            searchMealsByNameFromWeb(searchText.value)
+                            searchMealsByNameFromWeb(vm.searchText.value)
                         }
-                        mealsList.value = meals
+                        vm.mealsList.value = meals
 
                         if (meals.isEmpty()) {
-                            resultsText.value = "No meals found."
+                            vm.resultsText.value = "No meals found."
                         } else {
-                            resultsText.value = "${meals.size} meals found."
+                            vm.resultsText.value = "${meals.size} meals found."
 
                             // Load images in background
                             val loadedBitmaps = mutableMapOf<String, Bitmap?>()
@@ -136,12 +113,12 @@ fun SearchWebScreen() {
                                     }
                                 }
                             }
-                            bitmaps.value = loadedBitmaps
+                            vm.bitmaps.value = loadedBitmaps
                         }
-                        statusMessage.value = ""
+                        vm.statusMessage.value = ""
                     } catch (e: Exception) {
-                        resultsText.value = "Error: ${e.message}"
-                        statusMessage.value = ""
+                        vm.resultsText.value = "Error: ${e.message}"
+                        vm.statusMessage.value = ""
                     }
                 }
             },
@@ -156,9 +133,9 @@ fun SearchWebScreen() {
         Spacer(modifier = Modifier.height(16.dp))
 
         // Status message
-        if (statusMessage.value.isNotEmpty()) {
+        if (vm.statusMessage.value.isNotEmpty()) {
             Text(
-                text = statusMessage.value,
+                text = vm.statusMessage.value,
                 fontWeight = FontWeight.Bold,
                 fontSize = 14.sp
             )
@@ -166,16 +143,16 @@ fun SearchWebScreen() {
         }
 
         // Display results text
-        if (resultsText.value.isNotEmpty() && mealsList.value.isEmpty()) {
+        if (vm.resultsText.value.isNotEmpty() && vm.mealsList.value.isEmpty()) {
             Text(
-                text = resultsText.value,
+                text = vm.resultsText.value,
                 fontSize = 14.sp
             )
         }
 
         // Display meals with images inside cards (same as SearchMeals for consistency)
-        for (meal in mealsList.value) {
-            MealCard(meal = meal, bitmap = bitmaps.value[meal.idMeal])
+        for (meal in vm.mealsList.value) {
+            MealCard(meal = meal, bitmap = vm.bitmaps.value[meal.idMeal])
             Spacer(modifier = Modifier.height(20.dp))
         }
     }
