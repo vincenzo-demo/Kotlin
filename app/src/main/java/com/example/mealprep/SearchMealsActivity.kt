@@ -127,28 +127,11 @@ fun SearchMealsScreen(vm: SearchMealsViewModel = viewModel()) {
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        // Display results with images
+        // Display results with images inside cards
         if (vm.mealsList.value.isNotEmpty()) {
-            // REQUIRED TEXT FORMAT (Task 3)
-            Text(
-                text = formatMealsForDisplay(vm.mealsList.value),
-                fontSize = 12.sp
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // IMAGES (Task 6) - display image for each meal
             for (meal in vm.mealsList.value) {
-                val bitmap = vm.bitmaps.value[meal.idMeal]
-                if (bitmap != null) {
-                    Image(
-                        bitmap = bitmap.asImageBitmap(),
-                        contentDescription = meal.name,
-                        modifier = Modifier
-                            .size(120.dp)
-                            .padding(8.dp)
-                    )
-                }
+                MealCard(meal = meal, bitmap = vm.bitmaps.value[meal.idMeal])
+                Spacer(modifier = Modifier.height(20.dp))
             }
         } else if (vm.resultsText.value.isNotEmpty()) {
             Text(
@@ -259,6 +242,17 @@ fun MealCard(meal: Meal, bitmap: Bitmap?) {
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(
                     text = "Tags: ${meal.tags}",
+                    fontSize = 13.sp,
+                    color = Color.Gray,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+
+            // Youtube link
+            if (!meal.youtube.isNullOrEmpty()) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "YouTube: ${meal.youtube}",
                     fontSize = 13.sp,
                     color = Color.Gray,
                     modifier = Modifier.fillMaxWidth()
